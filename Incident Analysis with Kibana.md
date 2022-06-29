@@ -113,7 +113,7 @@ Identify at least one way to harden the vulnerable machine that would mitigate t
 Can you identify packets specifically from Hydra? 
 ```
 
-  ![](Images/Hydra%20brute%20force.png)
+  ![](Images/Brute%20force%20attack%20packets%20from%20Hydra.png)
 
 ``` bash
 How many requests were made in the brute-force attack? 
