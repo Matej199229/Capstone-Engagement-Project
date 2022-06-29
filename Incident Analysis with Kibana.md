@@ -1,124 +1,194 @@
-# Red Team: Summary of Operations
+# Blue Team: Incident Analysis with Kibana
 
 ## Table of Contents
-- Exposed Services
-- Critical Vulnerabilities
-- Exploitation
+- Adding Kibana Log Data
+- Adding Apache and System Metrics
+- Dashboard creation with reports
+- Identifying offensive traffic
+- Finding the request for the hidden directory
+- Identifying the brute force attack
+- Finding the WebDav connection
+- Identifying the reverse shell and meterpreter traffic
 
-### Exposed Services
+### Adding Kibana Log Data
 
-Nmap scan results for each machine reveal the below services and OS details:
+To start viewing logs in Kibana, we will need to import our filebeat, metricbeat and packetbeat data.
 ``` bash
-$ nmap -sV 192.168.1.110
+$ Adding Apache logs and System logs:
 ```
-  ![](Images/Nmap%20open%20port%20and%20version%20scan.png)
-  ![](Images/Target%201%20Machine.png)
+  ![](Images/Apache%20logs%201.png)
+  ![](Images/Apache%20logs%202.png)
+  ![](Images/Apache%20logs%203.png)
 
-This scan identifies the services below as potential points of entry:
-- Target 1
-  - List of Exposed Services
-    o	http
-    o	rcpbind
-    o	netbios-snn (Samba smbd 3.X-4.X)
-    o	ssh
+  ![](Images/Services%20and%20ports%20scan%20on%20Web%20Server.png)
+  ![](Images/System%20logs%202.png)
+  ![](Images/System%20logs%203.png)
 
 
-The following vulnerabilities were identified on each target:
-- Target 1
-  - List of Critical Vulnerabilities
-  o	CVE-2018-15473 - OpenSSH 2.2 through 7.7 is prone to a user enumeration vulnerability due to not delaying bailout for an invalid authenticating user until after the packet containing the request has been fully parsed, related to auth2-gss.c, auth2-hostbased.c, and auth2-pubkey.c.
-  o	CVE-2019-10092 – http Apache httpd In Apache HTTP Server 2.4.0 -2.4.39 (this version is 2.4.10 so this vulnerability would apply), a limited cross-site scripting issue was reported affecting the mod_proxy error page. An attacker could cause the link on the error page to be malformed and instead point to a page of their choice. This would only be exploitable where a server was set up with proxying enabled but was misconfigured in such a way that the Proxy Error page was displayed.
-  o	CVE-2017-8779 – rpcbind version 2-4 - rpcbind through 0.2.4, LIBTIRPC through 1.0.1 and 1.0.2-rc through 1.0.2-rc3, and NTIRPC through 1.4.3 do not consider the maximum RPC data size during memory allocation for XDR strings, which allows remote attackers to cause a denial of service (memory consumption with no subsequent free) via a crafted UDP packet to port 111, aka rpcbomb.
-  o	CVE-2017-7494 - netbios-ssn (Samba smbd 3.X – 4.X) - Samba since version 3.5.0 and before 4.6.4, 4.5.10 and 4.4.14 is vulnerable to remote code execution vulnerability, allowing a malicious client to upload a shared library to a writable share, and then cause the server to load and execute it.
-  o	CVE-2019-6579 open port 80 that we used to create exploit.php payload with msfvenom to open a meterpreter shell on the victim web server.
+### Adding Apache and System Metrics
 
-Vulnerability scan results 
+``` bash
+$ Adding Apache and System metrics:
+```
+  ![](Images/Apache%20Metrics%201.png)
+  ![](Images/Apache%20Metrics%202.png)
+  ![](Images/Apache%20Metrics%203.png)
 
-![](Images/Nmap%20vulnerabilities%20scan.png)
-![](Images/Nmap%20vulnerabilities%20scan%202.png)
+  ![](Images/System%20Metrics%201.png)
+  ![](Images/System%20Metrics%202.png)
+  ![](Images/System%20Metrics%203.png)
 
-### Exploitation
+### Dashboard creation with reports
 
-The Red Team was able to penetrate `Target 1` and retrieve the following confidential data:
-- Target 1
-  - `flag1.txt`: `flag1.txt` hash value_ b9bbcb33e11b80be759c4e844862482d 
-    - **Exploit Used**
-      - SSH into target 1
-      - Commands:     ssh michael@192.168.1.110
-                       cd /var/www/html 							
-                       cat service.html or cat service.html | grep flag
-                       ![](Images/Target%201%20ssh%20Michael.png)
-                       ![](Images/Target%201%20flag%201.png)
-  - `flag2.txt`: `flag2.txt` hash value_ fc3fd58dcdad9ab23faca6e9a36e581c
-    - **Exploit Used**
-      - The fact we got access to michael’s directory and then the database directory www
-      - ssh michael@192.168.1.110 						
-        cd var/www/								
-        ls 									
-        cat flag2.txt
-        ![](Images/Target%201%20flag%202.png)
+``` bash
+$ Creating a Kibana dashboard using the pre-built visualizations. 
+```
 
-    ### Enumerating WordPress site
-    ![](Images/Target%201%20wpscan%20user%20enum%201.png
-    ![](Images/Target%201%20wpscan%20user%20enum%202.png)
-
-    No flags found here
-
-    ### Use SSH to gain a user shell
-
-    ![](Images/Target%201%20ssh%20Michael.png)
-
-    Guessed Michael's password to be "michael"
-
-    ### Find the MySQL database password
-
-    ![](Images/MySQL%20database%20credentials.png)
-
-    ### User password hashes in Mysql
-
-    ![](Images/MySQL%20user%20password%20hashes.png)
-     
-    File with hashes of users
-    ![](Images/File%20with%20hashes.png)
-
-    ### Flags 3&4
-
-    Exploit Used
-    SSH - into target 1 as user ‘michael’ by guessing his weak password and gaining access to his wordpress directory and  wp-config.php file where you will find Michael’s mysql login credentials (user: root;        password: R@v3nSecurity) 
-    wpscan - run a Wordpress scan on the IP target and then enumerate the users which identified Steven and Michael
-    mysql - log into mysql with Michael’s credentials (user: root; password: R@v3nSecurity), select wordpress posts 
-    Commands: 
-    ssh michael@192.168.1.110						
-    cd var/www/html/wordpress/wp-config.php				
-    cat wp-config.php
-    
-    wpscan –url http://192.168.1.110/wordpress 			
-    wpscan –url http://192.168.1.110/wordpress –enumerate u
-    
-    mysql -u root -p; enter the password 					
-    show database; 							
-    use wordpress;							 
-    show tables;								 
-    select * from wp_posts
-
-    Exploit Used
-    SSH-into target 1 as user ‘michael’ by guessing his weak password and gaining access to his wordpress directory and  wp-config.php file. Here you will find Michael’s mysql login credentials 
-    wpscan - run a Wordpress scan on the IP target and then enumerate the users
-    mysql - log into mysql (user: root; password: R@v3nSecurity), select wordpress posts 
-    Commands:  
-Same steps as flag3 
+  ![](Images/Dashboard%20creation.png)
+  ![](Images/Reports%20created%20in%20Dashboard.png)
 
 
-    ![](Images/MySQL%20database%20tables.png)
-    ![](Images/MySQL%20flag%203%20%26%204.png)
+### Identifying offensive traffic
 
-    Escalating privileges to sudo with user Steven:
-    Use this python command below because Steven is able to run python commands
-    ![](Images/Privelege%20escelation%20with%20python.png)
+``` bash
+$ When did the interaction occur? 
+```
 
-    ### Exploit.php
-    ![](Images/Metasploit%20reverse%20shell%20exploit%201.png)
-    ![](Images/Metasploit%20reverse%20shell%20exploit%202.png)
-    ![](Images/Metasploit%20reverse%20shell%20exploit%203'.png)
-    ![](Images/HTTP%20Request%20Size%20Monitor%20alert%20test.png)
+  ![](Images/When%20did%20offensive%20traffic%20occur.png)
 
+May 14th, 2022 between 15:50 and 15:55 was when the majority of the interaction occurred.
+
+``` bash
+$ What responses did the victim send back?  
+```
+  ![](Images/What%20responses%20victim%20sent%20back.png)
+  ![](Images/What%20responses%20victim%20sent%20back%202.png)
+
+207 multi status responses were sent back to the attacker.
+
+``` bash
+$ What data is concerning from the Blue Team perspective?  
+```
+  ![](Images/Concerning%20data%20for%20Blue%20team.png)
+
+There is an abnormal amount of traffic coming from the same source_IP 192.168.1.90 to the web server in a very short time period over port 80 indicating suspicious activity.
+
+
+### Finding the request for the hidden directory
+
+``` bash
+$ How many requests were made to this directory? At what time and from which IP address(es)?   
+```
+  ![](Images/Requests%20to%20hidden%20directory.png)
+  ![](Images/Requests%20to%20hidden%20directory%202.png)
+
+There were 16444 http get requests to this directory between 15:51:55 and 15:53 from the same IP address 192.168.1.90.
+
+``` bash
+$ Which files were requested? What information did they contain?    
+```
+  ![](Images/Requested%20files%20in%20hidden%20directory.png)
+
+The secret folder directory was requested which contained the instructions for how to obtain access to the corp webdav server in the connect_to_corp_server file.
+
+``` bash
+$ What kind of alarm would you set to detect this behavior in the future?     
+```
+
+I would create an alarm based on a baseline for normal http get requests to this directory 
+and threshold each 30 mins for example. In this case it would be if there is more than 0 get requests to this directory, there should be an alarm sent out to the SOC management as NO ONE should be accessing this directory externally. 
+
+``` bash
+$ Identify at least one way to harden the vulnerable machine that would mitigate this attack.
+```
+
+- Improve the password for accessing this directory
+- Blacklist source IP 192.168.1.90 with a firewall rule
+- Remove the directory. Why is a secret folder directory needed on a web server? This information should be stored on a standalone and much more secure web server if it is truly of secret and of utmost importance.
+- Files and folders should be encrypted.
+
+### Identifying the brute force attack
+
+``` bash
+$ Can you identify packets specifically from Hydra? 
+```
+
+  ![](Images/Hydra%20brute%20force.png)
+
+``` bash
+$ How many requests were made in the brute-force attack? 
+```
+
+16428 HTTP GET requests in total with the GET /company_folders/secret_folder/ query and from user agent Mozilla 4.0/(Hydra)
+
+``` bash
+$ How many requests had the attacker made before discovering the correct password in this one?  
+```
+  
+  ![](Images/Attacker%20requests%20before%20guessing%20correct%20password.png)
+
+16426 requests with status marked as “error”
+
+``` bash
+$ What kind of alarm would you set to detect this behavior in the future and at what threshold(s)?   
+```
+
+The alarm I would set would be based on ANY requests (more than 0) coming in to the web server from user agent Hydra as this is a known tool that hackers use to brute force into web applications.
+
+``` bash
+$ Identify at least one way to harden the vulnerable machine that would mitigate this attack.   
+```
+
+- Complex and long passwords to make it harder for brute force attacks to succeed
+- Blacklist IPs associated with brute force attacks
+
+### Finding the WebDav connection
+
+``` bash
+$ How many requests were made to this directory?    
+```
+  ![](Images/Requests%20to%20WebDav%20directory.png)
+
+84 requests to the /WebDav directory in total
+
+``` bash
+$ Which file(s) were requested?     
+```
+
+Exploit.php
+
+``` bash
+$ What kind of alarm would you set to detect such access in the future?     
+```
+
+Whitelist specific machines that are allowed access. Alarm should be set for any machine trying to access webdav that is not on the whitelist
+
+``` bash
+$ Identify at least one way to harden the vulnerable machine that would mitigate this attack.     
+```
+
+Whitelist machines that are allowed access to webdav
+
+### Identifying the reverse shell and meterpreter traffic
+
+``` bash
+$ Can you identify traffic from the meterpreter session?     
+```
+
+  ![](Images/Reverse%20shell%20and%20meterpreter%20traffic.png)
+
+I searched by source.port = 4444 as that is the port that the meterpreter session is being directed from the attacker machine. We have 116 counts on that port.
+
+``` bash
+$ What kinds of alarms would you set to detect this behavior in the future?     
+```
+
+I would set an alarm for incoming traffic from source port 4444. If we are not expecting ANY normal traffic from this port otherwise, then the alarm should be triggered if there is even 1 count of traffic from this port onto the server as it could be suspicious since port 4444 is the default listening port used for meterpreter sessions.
+
+``` bash
+$ Identify at least one way to harden the vulnerable machine that would mitigate this attack.    
+```
+
+- Using tools like Antipwny or Antimeter. These tools help find and kill the meterpreter session that the attacker has gained.
+- Run applications/processes on server with least privileges
+- Limit network access to only trusted hosts
